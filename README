@@ -1,0 +1,43 @@
+Notes on IO::Filter::External
+-----------------------------
+
+"w" -- write mode
+-----------------
+
+Sets up a pipeline like this:
+
+  your program               		external                $io acting
+  writing to    ---------->  buffer -->	program   ----------->  as the sink
+  $fio                                  		        of data
+
+Each syswrite causes:
+
+	syswrite to write pipe (won't ever block, obviously)
+	keep reading from external program and writing to $io until blocks
+
+Close causes:
+
+	close write pipe
+	keep reading from external program and writing to $io until EOF
+	close read pipe
+	close $io
+
+"r" -- read mode
+----------------
+
+  your program               external                $io acting
+  reading from  <----------  program   <-----------  as the source
+  $fio                                               of data
+
+Each sysread causes:
+
+	loop forever:
+		select on read from $io and read from read pipe
+		if (read from $io)
+			read from $io and write to write pipe
+		if (read from read pipe)
+			return data to user
+
+Close causes:
+
+	close everything (?)
